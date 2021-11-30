@@ -1,10 +1,20 @@
 <template>
   <div class="card transactions">
     <div class="card-header">
-      <div class="card-title">hi</div>
+      <div class="card-title">Latest Transactions</div>
     </div>
-    <div class="card-body entries">
-      <TransactionEntry v-for="(block, i) of latestBlocks" :key="i" :data="block" class="entry" />
+    <div class="card-body">
+      <div v-if="latestTransactions.length > 0" class="entries">
+        <TransactionEntry
+          v-for="(trans, i) of latestTransactions"
+          :key="i"
+          :data="trans"
+          class="entry"
+        />
+      </div>
+      <div v-else>
+        none
+      </div>
     </div>
   </div>
 </template>
@@ -12,8 +22,8 @@
 <script>
 export default {
   computed: {
-    latestBlocks () {
-      return []
+    latestTransactions () {
+      return this.$store.state.latestTransactions
     }
   }
 }

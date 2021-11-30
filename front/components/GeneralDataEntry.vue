@@ -1,6 +1,6 @@
 <template>
   <div class="entry">
-    <div class="icon" :style="'background-image: url(' + img + '); background-size: 100%;'" />
+    <div class="icon" :style="'background-image: url(' + img + ');'" />
     <div class="data-panel">
       <span class="title">{{ title }}</span>
       <span class="data">{{ data }}</span>
@@ -23,8 +23,11 @@ export default {
 
 .icon {
   margin-right: 1em;
-  width: 2.5em;
-  height: 2.5em;
+  background-size: 100%;
+  background-repeat: no-repeat;
+  width: 2.8em;
+  height: 2.8em;
+  min-width: 2.8em;
 }
 
 .data-panel {

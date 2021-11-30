@@ -11,15 +11,6 @@
 
 <script>
 export default {
-  data () {
-    setInterval(async () => {
-      const a = await this.$axios.$get('/api/blockchain/blocks', { progress: false })
-      this.$store.commit('setBlockCount', a.length)
-    }, 1000)
-
-    return {}
-  },
-
   computed: {
     darkMode () {
       return this.$store.state.darkMode
@@ -33,9 +24,23 @@ export default {
   font-family: "Poppins", sans-serif;
   line-height: 1.5;
   color: var(--clr-fg);
-  transition: background-color 0.2s linear;
+  transition: background-color var(--clr-trans-spd) var(--clr-trans-tf);
   background-color: var(--clr-bg);
   user-select: none;
+  max-width: 90%;
+  margin: auto;
+}
+
+@media (max-width: 600) {
+  .app {
+    font-family: "Poppins", sans-serif;
+    line-height: 1.5;
+    color: var(--clr-fg);
+    transition: background-color var(--clr-trans-spd) var(--clr-trans-tf);
+    background-color: var(--clr-bg);
+    user-select: none;
+    margin: auto;
+  }
 }
 
 .background {
@@ -44,7 +49,7 @@ export default {
   right: 0;
   bottom: 0;
   left: 0;
-  transition: background-color 0.2s linear;
+  transition: background-color var(--clr-trans-spd) var(--clr-trans-tf);
   background-color: var(--clr-bg);
   z-index: -300;
 }

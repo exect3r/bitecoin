@@ -2,6 +2,7 @@ const crypto = require('crypto');
 const elliptic = require('elliptic');
 const EdDSA = elliptic.eddsa;
 const ec = new EdDSA('ed25519');
+const Config = require('../config')
 
 class Crypto {
     static hash(data) {
@@ -18,7 +19,7 @@ class Crypto {
     }
 
     static generateSecret(password) {
-        let secret = crypto.pbkdf2Sync(password, SALT, 10000, 512, 'sha512').toString('hex');
+        let secret = crypto.pbkdf2Sync(password, Config.SALT, 10000, 512, 'sha512').toString('hex');
         return secret;
     }
 

@@ -37,7 +37,7 @@ export default {
   ],
 
   // Modules: https://go.nuxtjs.dev/config-modules
-  modules: ['@nuxtjs/axios', '@nuxtjs/proxy'],
+  modules: ['@nuxtjs/axios', '@nuxtjs/proxy', '@nuxtjs/auth-next'],
 
   // Build Configuration: https://go.nuxtjs.dev/config-build
   build: {
@@ -49,8 +49,29 @@ export default {
 
   proxy: {
     "/api/": {
-      target: "http://localhost:3002/",
+      target: "http://localhost:3001/",
       pathRewrite: { "^/api/": "" }
+    }
+  },
+
+  auth: {
+    strategies: {
+      local: { 
+        token: {
+          property: 'token',
+          global: true,
+          required: true,
+          type: 'Bearer'
+        },
+        user: {
+          property: 'user'
+        },
+        endpoints: {
+          login: { url: '/api/teller/login', method: 'post' },
+          user: { url: '/api/teller/user', method: 'get' },
+          logout: false
+        }
+      }
     }
   }
 }

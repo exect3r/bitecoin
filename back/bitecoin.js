@@ -1,6 +1,6 @@
 require('colors');
 const Blockchain = require('./blockchain');
-const Operator = require('./operator');
+const Teller = require('./teller');
 const BiteCoinServer = require('./server');
 const { log } = require('./utils/logs');
 
@@ -13,7 +13,7 @@ class BiteCoin {
         this.blockchain = new Blockchain(this.name);
         this.blockchain.init();
 
-        this.operator = new Operator(this);
+        this.teller = new Teller(this);
         
         this.server = new BiteCoinServer(this);
     }

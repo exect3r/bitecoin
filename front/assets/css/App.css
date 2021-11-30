@@ -69,11 +69,14 @@ html::-webkit-scrollbar {
 
 :root {
   --page-width: 1400px;
+  --clr-trans-spd: .2s;
+  --clr-trans-tf: linear;
 }
 
 .light {
   --clr-bg: #fcfcfc;
   --clr-bg-alt: #fff;
+  --clr-bg-dec: #eee;
   --clr-fg: #555;
   --clr-fg-alt: #444;
   --clr-primary: #2978b5;
@@ -83,6 +86,7 @@ html::-webkit-scrollbar {
 .dark {
   --clr-bg: #23283e;
   --clr-bg-alt: #2a2f4c;
+  --clr-bg-dec: #1b2033;
   --clr-fg: #bdbddd;
   --clr-fg-alt: #cdcdff;
   --clr-primary: #90a0d9;
@@ -112,19 +116,20 @@ html::-webkit-scrollbar {
 .card {
   height: 100%;
   margin: 0 auto;
-  text-align: center;
   box-shadow: var(--shadow);
-  transition: transform 0.2s linear;
+  transition: border-color var(--clr-trans-spd) var(--clr-trans-tf);
   display: flex;
   flex-direction: column;
   border-radius: 10px;
-  border: 1px rgb(233, 233, 233) solid;
+  border: 1px var(--clr-bg-dec) solid;
+  overflow: hidden;
 }
 
 .card-header {
-  text-align: left;
   padding: 0em;
-  border-bottom: 1px black solid;
+  border-bottom: 1px var(--clr-bg-dec) solid;
+  transition: border-color var(--clr-trans-spd) var(--clr-trans-tf);
+  background-color: transparent;
 }
 
 .card-title {
@@ -133,6 +138,7 @@ html::-webkit-scrollbar {
 
 .card-body {
   padding: 1.2em;
+  background-color: transparent;
 }
 
 .link {
@@ -182,49 +188,21 @@ html::-webkit-scrollbar {
   padding: 0.8em 1.4em;
   font-weight: 500;
   font-size: 0.9rem;
-  text-transform: lowercase;
   transition: transform 0.2s ease-in-out;
 }
 
 .btn-outline {
   color: var(--clr-primary);
-  border: 2px solid var(--clr-primary);
+  border: 1px solid var(--clr-primary);
+  border-radius: 7px;
   position: relative;
   overflow: hidden;
   z-index: 1;
-  transition: color 0.2s ease-in-out;
 }
 
 .btn-outline:hover, .btn-outline:focus {
   color: var(--clr-bg);
-}
-
-.btn-outline:before {
-  content: '';
-  position: absolute;
   background-color: var(--clr-primary);
-  right: -10px;
-  bottom: -10px;
-  left: -10px;
-  top: -10px;
-  z-index: -1;
-  opacity: 0;
-  transition: opacity 0.2s ease-in-out;
-}
-
-.btn-outline:hover:before, .btn-outline:focus:before {
-  opacity: 1;
-}
-
-.btn-plain {
-  text-transform: initial;
-  background-color: var(--clr-bg-alt);
-  box-shadow: rgba(0, 0, 0, 0.15) 0px 3px 3px 0px;
-  border: 0;
-}
-
-.btn-plain:hover {
-  transform: translateY(-4px);
 }
 
 .btn-icon {

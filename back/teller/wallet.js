@@ -1,21 +1,20 @@
 const Crypto = require('../utils/crypto');
+const { warn } = require('../utils/logs');
 
 class Wallet {
     constructor() {
         this.id = null;
+        this.email = null;
         this.passwordHash = null;
         this.secret = null;
         this.keyPairs = [];
     }
 
     generateAddress() {
-        if (this.secret == null)
-            this.generateSecret();
-
-        let lastKeyPair = this.keyPairs.length > 0 ? this.keyPairs[this.keyPairs.length - 1] : null;
+        this.generateSecret();
 
         // Generate next seed based on the first secret or a new secret from the last key pair.
-        let seed = !lastKeyPair ? this.secret : lastKeyPair.secretKey;
+        let seed = this.secret;
         let keyPairRaw = Crypto.generateKeyPairFromSecret(seed);
         let newKeyPair = {
             index: this.keyPairs.length + 1,
@@ -28,7 +27,9 @@ class Wallet {
     }
 
     generateSecret() {
-        this.secret = Crypto.generateSecret(this.passwordHash);
+        if (!this.secret)
+            this.secret = Crypto.generateSecret(this.passwordHash + this.id);
+        else this.secret = Crypto.generateSecret(this.secret);
         return this.secret;
     }
 
@@ -41,24 +42,18 @@ class Wallet {
     }
 
     getSecretKeyByAddress(address) {
-        return (this.keyPairs.find(pair => pair.publicKey == publicKey) || { secretKey: null }).secretKey
+        return (this.keyPairs.find(pair => pair.publicKey == address) || { secretKey: null }).secretKey
     }
 
     getAddresses() {
         return this.keyPairs.map(pair => pair.publicKey);
     }
 
-    static fromPassword(password) {
+    static create(email, password) {
         let wallet = new Wallet();
         wallet.id = Crypto.randomId();
-        wallet.passwordHash = Crypto.hash(password);
-        return wallet;
-    }
-
-    static fromHash(passwordHash) {
-        let wallet = new Wallet();
-        wallet.id = Crypto.randomId();
-        wallet.passwordHash = passwordHash;
+        wallet.email = email;
+        wallet.passwordHash = password;
         return wallet;
     }
 
@@ -66,6 +61,14 @@ class Wallet {
         let wallet = new Wallet();
         Object.entries(data).forEach(([key, value]) => { wallet[key] = value; });
         return wallet;
+    }
+
+    static Array = class WalletsArray extends Array {
+        static fromJson(data) {
+            let wallets = new WalletsArray();
+            Object.values(data).forEach((wallet) => { wallets.push(Wallet.fromJson(wallet)); });
+            return wallets;
+        }
     }
 }
 

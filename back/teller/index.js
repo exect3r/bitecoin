@@ -1,16 +1,14 @@
-const Wallets = require('./wallets');
 const Wallet = require('./wallet');
 const Transaction = require('../blockchain/transaction');
-const TransactionBuilder = require('./transactionBuilder');
 const Database = require('../utils/database');
 const Config = require('../config');
 const { log, warn, error } = require('../utils/logs');
 
-class Operator {
+class Teller {
     constructor(node) {
-        this.db = new Database(`data/${node.blockchain.name}/${Config.OPERATOR_FILE}`, new Wallets());
+        this.db = new Database(`data/${node.blockchain.name}/${Config.TELLER_FILE}`, new Wallet.Array());
 
-        this.wallets = this.db.read(Wallets);
+        this.wallets = this.db.read(Wallet.Array);
         this.blockchain = node.blockchain;
     }
 
@@ -20,8 +18,8 @@ class Operator {
         return wallet;
     }
 
-    createWalletFromPassword(password) {
-        let newWallet = Wallet.fromPassword(password);
+    createWallet(email, password) {
+        let newWallet = Wallet.create(email, password);
         return this.addWallet(newWallet);
     }
 
@@ -40,39 +38,38 @@ class Operator {
     }
 
     getWalletById(walletId) {
-        return this.wallets.find(wallet => { return wallet.id == walletId; });
+        return this.wallets.find(wallet => wallet.id == walletId);
     }
 
-    generateAddressForWallet(walletId) {
-        let wallet = this.getWalletById(walletId);
-        if (wallet == null) {
-            error((`Wallet with id '${walletId.yellow}' does not exist!`));
-            throw (`Wallet with id '${walletId}' does not exist!`);
-        }
+    getWalletByEmail(email) {
+        return this.wallets.find(wallet => wallet.email == email);
+    }
 
+    getBalanceForWallet(wallet) {
+        return wallet.getAddresses().map(addr => this.getBalanceForAddress(addr))
+            .reduce((a1, a2) => a1 + a2, 0);
+    }
+
+    generateAddressForWallet(wallet) {
         let address = wallet.generateAddress();
         this.db.write(this.wallets);
         return address;
     }
 
-    getAddressesForWallet(walletId) {
-        let wallet = this.getWalletById(walletId);
-        if (wallet == null) {
-            error((`Wallet with id '${walletId.yellow}' does not exist!`));
-            throw (`Wallet with id '${walletId}' does not exist!`);
-        }
+    getAddressesForWallet(wallet) {
+        return wallet.getAddresses();
+    }
 
-        let addresses = wallet.getAddresses();
-        return addresses;
+    walletContainsAddress(walletId, address) {
+        return this.getAddressesForWallet(walletId).find(addr => addr == address) != null;
     }
 
     getBalanceForAddress(addressId) {
         let unspent = this.blockchain.getUnspentTransactionsForAddress(addressId);
 
-        if (unspent == null || unspent.length == 0) {
-            error((`No transactions found for address '${addressId.yellow}'!`));
-            throw (`No transactions found for address '${addressId}'!`);
-        }
+        if (unspent == null || unspent.length == 0)
+            return 0;
+
         return unspent.reduce((a1, a2) => a1.amount + a2.amount);
     }
 
@@ -92,15 +89,15 @@ class Operator {
             throw (`Secret key not found for wallet id '${walletId}' and address '${fromAddressId}'!`);
         }
 
-        let tx = new TransactionBuilder();
+        let tx = Transaction.create();
         tx.from(utxo);
         tx.to(toAddressId, amount);
         tx.change(changeAddressId || fromAddressId);
         tx.fee(Config.FEE_PER_TRANSACTION);
         tx.sign(secretKey);
 
-        return Transaction.fromJson(tx.build());
+        return tx.build();
     }
 }
 
-module.exports = Operator;
+module.exports = Teller;

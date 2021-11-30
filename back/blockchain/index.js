@@ -1,7 +1,6 @@
 const Database = require('../utils/database');
-const Blocks = require('./blocks');
 const Block = require('./block');
-const Transactions = require('./transactions');
+const Transaction = require('./transaction');
 const Config = require('../config');
 const { log, error, warn } = require('../utils/logs');
 const EventEmitter = require('events');
@@ -10,11 +9,11 @@ class Blockchain {
     constructor(name) {
         this.name = name;
 
-        this.blocksDb = new Database(`data/${name}/${Config.BLOCKCHAIN_FILE}`, new Blocks());
-        this.transDb = new Database(`data/${name}/${Config.TRANSACTIONS_FILE}`, new Transactions());
+        this.blocksDb = new Database(`data/${name}/${Config.BLOCKCHAIN_FILE}`, new Block.Array());
+        this.transDb = new Database(`data/${name}/${Config.TRANSACTIONS_FILE}`, new Transaction.Array());
 
-        this.blocks = this.blocksDb.read(Blocks);
-        this.transactions = this.transDb.read(Transactions);
+        this.blocks = this.blocksDb.read(Block.Array);
+        this.transactions = this.transDb.read(Transaction.Array);
         this.events = new EventEmitter();
     }
 
@@ -38,6 +37,10 @@ class Blockchain {
         return this.blocks.find(block => block.index == index);
     }
 
+    getBlocksInRange(start, end) {
+        return this.blocks.slice(start, end);
+    }
+
     getBlockByHash(hash) {
         return this.blocks.find(block => block.hash == hash);
     }
@@ -58,8 +61,16 @@ class Blockchain {
         return this.transactions.find(trans => trans.id == id);
     }
 
+    getTransactionsInRange(start, end) {
+        return this.transactions.slice(start, end);
+    }
+
     getTransactionFromBlocks(transactionId) {
         return this.blocks.find(block => block.transactions.find(trans => trans.id == transactionId));
+    }
+
+    getTransactionsFromBlocks() {
+        return this.blocks.map(block => block.transactions).flat();
     }
 
     replaceChain(blockchain) {
@@ -254,7 +265,7 @@ class Blockchain {
         // Considers both transactions in block and unconfirmed transactions (enabling transaction chain)
         let txOutputs = [];
         let txInputs = [];
-        this.blocks.forEach(block => block.forEach(selectTxs));
+        this.blocks.forEach(block => block.transactions.forEach(selectTxs));
         this.transactions.forEach(selectTxs);
 
         // Cross both lists and find transactions outputs without a corresponding transaction input

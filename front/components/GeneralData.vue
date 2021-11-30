@@ -12,14 +12,14 @@ export default {
     generalData () {
       return [
         {
-          title: 'Bitecoin price',
+          title: 'Price',
           img: 'bitecoin.png',
-          data: '$69'
+          data: `$${this.$store.state.coinPrice}`
         },
         {
           title: 'Transactions',
           img: 'bitecoin.png',
-          data: '420'
+          data: this.$store.state.transactionCount
         },
         {
           title: 'Blocks',
@@ -29,7 +29,7 @@ export default {
         {
           title: 'Difficulty',
           img: 'bitecoin.png',
-          data: '1H'
+          data: `${this.$store.state.hashDifficulty}H` // add kH, mH, gH and tH auto-conversion
         }
       ]
     }
@@ -47,8 +47,13 @@ export default {
   width: 50%;
 }
 
-.data0 { grid-area: 1 / 1 / 2 / 2; }
-.data1 { grid-area: 1 / 2 / 2 / 3; }
-.data2 { grid-area: 2 / 1 / 3 / 2; }
-.data3 { grid-area: 2 / 2 / 3 / 3; }
+@media (max-width: 600px) {
+  .grid {
+    display: flex;
+    flex-direction: row;
+    width: 90%;
+    overflow-x: scroll;
+    scrollbar-width: 3px;
+  }
+}
 </style>

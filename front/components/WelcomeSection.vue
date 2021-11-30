@@ -3,7 +3,7 @@
     <div class="text">
       <h2 class="section-title">Welcome to BiteCoin</h2>
       <p class="welcome-desc">
-        BiteCoin is a fully functional cryptocurrency school project made as a practice for my Blockchain studies.
+        BiteCoin is a small cryptocurrency project to practice my Blockchain studies.
       </p>
     </div>
     <div class="img">
@@ -29,6 +29,8 @@
   height: 32em;
   background-image: url('/miner.png');
   background-size: 100%;
+  background-repeat: no-repeat;
+  background-position: center;
 }
 
 .welcome-desc {
@@ -38,9 +40,13 @@
 }
 
 @media (max-width: 600px) {
-  .app .welcome {
+  .welcome {
     align-items: flex-start;
     margin-top: 2em;
+  }
+
+  .img {
+    display: none;
   }
 }
 </style>

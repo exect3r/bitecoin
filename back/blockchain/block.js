@@ -1,5 +1,5 @@
 const Crypto = require('../utils/crypto');
-const Transactions = require('./transactions');
+const Transaction = require('./transaction');
 const Config = require('../config');
 
 class Block {
@@ -19,7 +19,7 @@ class Block {
         let block = new Block();
         Object.entries(data).forEach(([key, value]) => {
             if (key == 'transactions' && value) {
-                block[key] = Transactions.fromJson(value);
+                block[key] = Transaction.Array.fromJson(value);
             } else {
                 block[key] = value;
             }
@@ -27,6 +27,14 @@ class Block {
 
         block.hash = block.toHash();
         return block;
+    }
+
+    static Array = class BlocksArray extends Array {
+        static fromJson(data) {
+            let blocks = new BlocksArray();
+            data.forEach((block) => blocks.push(Block.fromJson(block)));
+            return blocks;
+        }
     }
 
 }

@@ -32,9 +32,9 @@ class BiteCoinServer {
 
             res.status(200).send({
                 blockCount: blockchain.getAllBlocks().length,
-                transactionCount: blockchain.getAllTransactions().length,
+                transactionCount: blockchain.getTransactionsFromBlocks().length,
                 coinPrice: 0, // calculate coin price in dollars
-                hashPower: 0, // calculate hash power
+                hashPower: Config.pow.getDifficulty(blockchain.getAllBlocks()), // calculate hash power
             });
         });
 
@@ -42,6 +42,24 @@ class BiteCoinServer {
             logReq('GET', req);
 
             res.status(200).send(blockchain.getAllBlocks());
+        });
+
+        this.app.post('/blockchain/blocks', (req, res) => {
+            logReq('POST', req);
+
+            try {
+                // sanitize block from excess properties
+                const block = Block.fromJson(req.body.block);
+
+                if (blockchain.checkBlock(block, blockchain.getLastBlock())) {
+                    blockchain.addBlock(block)
+                    res.status(200).send({ status: 'Block added to the blockchain successfully. ' });
+                }
+            } catch (e) {
+                warn(e);
+                res.status(403).send({ error: e });
+                throw e;
+            }
         });
 
         this.app.get('/blockchain/blocks/latest', (req, res) => {
@@ -81,11 +99,11 @@ class BiteCoinServer {
             res.status(200).send(blockFound);
         });
 
-        this.app.get('/blockchain/blocks/:range([0-9]+\\-[0-9]+)', (req, res) => {
+        this.app.get('/blockchain/blocks/:range([0-9]{0,}\\-[0-9]+)', (req, res) => {
             logReq('GET', req);
 
             let bounds = req.params.range.split('-');
-            let start = Number(bounds[0]);
+            let start = Number(bounds[0] || -1);
             let end = Number(bounds[1]);
 
             res.status(200).send(blockchain.getBlocksInRange(start, end));
@@ -117,11 +135,11 @@ class BiteCoinServer {
             res.status(200).send(transactionFromBlock);
         });
 
-        this.app.get('/blockchain/transactions/:range([0-9]+\\-[0-9]+)', (req, res) => {
+        this.app.get('/blockchain/transactions/:range([0-9]{0,}\\-[0-9]+)', (req, res) => {
             logReq('GET', req);
 
             let bounds = req.params.range.split('-');
-            let start = Number(bounds[0]);
+            let start = Number(bounds[0] || -1);
             let end = Number(bounds[1]);
 
             res.status(200).send(blockchain.getTransactionsInRange(start, end));
@@ -173,19 +191,23 @@ class BiteCoinServer {
             const previousBlock = blockchain.getLastBlock();
             const newIndex = previousBlock.index + 1;
             let cleanTransactions = [];
+            let toRemove = [];
+
+            console.log('len', blockchain.transactions.length)
 
             blockchain.transactions.forEach((trans, i) => {
+                console.log('treating ', i)
                 if (cleanTransactions.length == Config.TRANSACTIONS_PER_BLOCK) return;
 
                 if (trans.type == 'regular' && trans.data.outputs.find(out => out.amount < 0)) {
                     warn(`Discarding regular transaction ${trans.id.yellow} that has negative outputs.`);
-                    blockchain.transactions.splice(i, 1);
+                    toRemove.push(i);
                     return;
                 }
                 
-                if (trans.type != 'regular' || trans.type != 'reward') {
-                    warn(`Discarding transaction ${trans.id.yellow} that has an unknown type ${trans.type.red}.`);
-                    blockchain.transactions.splice(i, 1);
+                if (trans.type != 'regular' && trans.type != 'reward') {
+                    warn(`Discarding transaction ${trans.id.yellow} that has an unknown type ${(trans.type || '').red}.`);
+                    toRemove.push(i);
                     return;
                 }
 
@@ -198,7 +220,7 @@ class BiteCoinServer {
                     )
                 )) {
                     warn(`Discarding transaction ${trans.id.yellow} that has a double spending.`);
-                    warn(blockchain.transactions.splice(i, 1));
+                    toRemove.push(i);
                     return;
                 }
 
@@ -211,42 +233,40 @@ class BiteCoinServer {
                     )
                 ))) {
                     warn(`Discarding transaction ${trans.id.yellow} that has an already existing input.`);
-                    warn(blockchain.transactions.splice(i, 1));
+                    toRemove.push(i);
                     return;
                 }
 
                 cleanTransactions.push(trans);
             });
 
+            toRemove.forEach(i => blockchain.transactions.splice(i, 1));
+            console.log('removed', toRemove);
+            console.log(blockchain.transactions)
             cleanTransactions = cleanTransactions.slice(0, Config.TRANSACTIONS_PER_BLOCK);
 
-            if (cleanTransactions.length == 0) {
-                warn('Not enough transactions to populate the block!');
-                res.status(403).send({ error: 'Not enough transactions to populate the block!' });
-                return;
-            }
-
-            if (req.query.addressId) {
+            if (req.params.addressId) {
                 cleanTransactions.push(Transaction.fromJson({
                     id: Crypto.randomId(64),
                     type: 'reward',
                     data: {
                         inputs: [],
                         outputs: [{
-                            address: req.query.addressId,
+                            address: req.params.addressId,
                             amount: Config.MINING_REWARD
                         }]
                     }
                 }));
             }
 
-            return Block.fromJson({
+            res.status(200).send(Block.fromJson({
                 index: newIndex,
                 nonce: 0,
                 timestamp: Date.now(),
                 transactions: cleanTransactions,
-                previousHash: previousBlock.hash
-            });
+                previousHash: previousBlock.hash,
+                difficulty: Config.pow.getDifficulty(blockchain.getAllBlocks(), newIndex)
+            }));
         });
 
         function authenticateToken(req, res, next) {
@@ -303,6 +323,7 @@ class BiteCoinServer {
             }
 
             wallet = teller.createWallet(req.body.email, hashedPwd);
+            teller.generateAddressForWallet(wallet);
 
             res.status(200).send();
         });
@@ -346,6 +367,24 @@ class BiteCoinServer {
             res.status(200).send({ addresses: addresses });
         });
 
+        this.app.get('/teller/wallet/transactions/:range([0-9]{0,}\\-[0-9]+)', authenticateToken, (req, res) => {
+            logReq('GET', req);
+
+            const wallet = teller.getWalletById(req.user.walletId);
+            if (!wallet) {
+                warn(`User ${req.user.email.yellow} has a non-existing wallet id ${req.user.walletId.yellow}`);
+                res.status(404).send({ error: `Could not find wallet with id ${req.user.walletId} !` });
+                return;
+            }
+
+            let bounds = req.params.range.split('-');
+            let start = Number(bounds[0] || -1);
+            let end = Number(bounds[1]);
+
+            const transactions = teller.getWalletTransactions(wallet);
+            res.status(200).send({ transactions: start >= 0 ? transactions.slice(start, end) : transactions.slice(-end) });
+        });
+
         this.app.post('/teller/wallet/addresses', authenticateToken, (req, res) => {
             logReq('POST', req);
 
@@ -360,39 +399,36 @@ class BiteCoinServer {
             res.status(201).send({ address: newAddress });
         });
 
-        this.app.post('/teller/wallets/:walletId/transactions', (req, res) => {
+        this.app.post('/teller/wallet/transactions', authenticateToken, (req, res) => {
             logReq('POST', req);
 
-            let walletId = req.params.walletId;
-            let password = req.headers.password;
-
-            if (password == null) {
-                warn(`Password not provided!`);
-                res.status(401).send({ error: `Password not provided!` });
-                return;
+            try {
+                let transaction = teller.createTransaction(req.user.walletId, req.body.from, req.body.to,
+                    Number(req.body.amount), Number(req.body.fee));
+                
+                //console.log(transaction, transaction.data)
+                
+                transaction.check();
+                res.status(201).send(blockchain.addTransaction(Transaction.fromJson(transaction)));
+            } catch (e) {
+                res.status(403).send({ error: 'Could not create transaction.' });
             }
-
-            let passwordHash = Crypto.hash(password);
-
-            if (!teller.checkWalletPassword(walletId, passwordHash)) {
-                warn(`Invalid password for wallet ${walletId.yellow} !`);
-                res.status(403).send({ error: `Invalid password for wallet ${walletId} !` });
-                return;
-            }
-
-            let transaction = teller.createTransaction(walletId, req.body.fromAddress, req.body.toAddress, req.body.amount, req.body['changeAddress'] || req.body.fromAddress);
-            transaction.check();
-
-            res.status(201).send(blockchain.addTransaction(Transaction.fromJson(transaction)));
         });
 
-        this.app.get('/teller/:addressId/balance', (req, res) => {
+        this.app.get('/teller/:addressId/balance', authenticateToken, (req, res) => {
             logReq('GET', req);
 
             let addressId = req.params.addressId;
             // check address exists.
             let balance = teller.getBalanceForAddress(addressId);
             res.status(200).send({ balance: balance });
+        });
+
+        this.app.get('/blockchain/utxos', (req, res) => {
+            logReq('GET', req);
+
+            res.status(200).send(teller.getWallets().flatMap(wallet => teller.getAddressesForWallet(wallet))
+                .map(addr => ({ address: addr, utxos: blockchain.getUnspentTransactionsForAddress(addr) })));
         });
     }
 

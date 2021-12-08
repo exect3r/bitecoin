@@ -38,7 +38,7 @@ class Blockchain {
     }
 
     getBlocksInRange(start, end) {
-        return this.blocks.slice(start, end);
+        return start >= 0 ? this.blocks.slice(start, end) : this.blocks.slice(-end);
     }
 
     getBlockByHash(hash) {
@@ -62,7 +62,8 @@ class Blockchain {
     }
 
     getTransactionsInRange(start, end) {
-        return this.transactions.slice(start, end);
+        const trans = this.getTransactionsFromBlocks();
+        return start >= 0 ? trans.slice(start, end) : trans.slice(-end);
     }
 
     getTransactionFromBlocks(transactionId) {
@@ -70,7 +71,7 @@ class Blockchain {
     }
 
     getTransactionsFromBlocks() {
-        return this.blocks.map(block => block.transactions).flat();
+        return this.blocks.flatMap(block => block.transactions);
     }
 
     replaceChain(blockchain) {
@@ -116,7 +117,7 @@ class Blockchain {
             this.cullTransactions(block);
 
             if (event) this.events.emit('blockAdded', block);
-            log(`Block added: ${block.hash}`);
+            log(`Block added: ${block.hash.yellow}`);
             return block;
         }
     }
@@ -127,17 +128,19 @@ class Blockchain {
             this.transDb.write(this.transactions);
 
             if (event) this.events.emit('transactionsAdded', trans);
-            log(`Transaction added: ${trans.id}`);
+            log(`Transaction added: ${trans.id.yellow}`);
             return trans;
         }
     }
 
     cullTransactions(block) {
-        this.transactions = this.transactions.map(trans => { if (!block.transactions.find(tr => tr.id == trans.id)) return trans; });
+        this.transactions = this.transactions.filter(trans => !block.transactions.find(tr => tr.id == trans.id) );
         this.transDb.write(this.transactions);
     }
 
-    checkBlock(newBlock, previousBlock, referenceBlockchain = this.blocks) {
+    checkBlock(newBlock, previousBlock, referenceBlockchain) {
+        if (!referenceBlockchain) referenceBlockchain = this.blocks;
+
         const blockHash = newBlock.toHash();
 
         // Check index chaining.
@@ -166,10 +169,14 @@ class Blockchain {
         // Check if the sums are correct.
         let sumOfInputsAmount = Config.MINING_REWARD;
         let sumOfOutputsAmount = 0;
+        let list = {};
 
         for (let trans of newBlock.transactions) {
-            sumOfInputsAmount += trans.data.inputs.reduce((i1, i2) => i1.amount + i2.amount);
-            sumOfOutputsAmount += trans.data.outputs.reduce((i1, i2) => i1.amount + i2.amount);
+            sumOfInputsAmount += trans.data.inputs.map(i => i.amount).reduce((i1, i2) => i1 + i2, 0);
+            sumOfOutputsAmount += trans.data.outputs.map(i => i.amount).reduce((i1, i2) => i1 + i2, 0);
+
+            trans.data.inputs.map(inputTx => inputTx.transaction + inputTx.index)
+                .forEach(tx => { list[tx] ? list[tx]++ : list[tx] = 1; });
         }
 
         log(`sums ${sumOfInputsAmount} ${sumOfOutputsAmount}`);
@@ -180,31 +187,24 @@ class Blockchain {
         }
 
         // Check if there is double spending
-        /*let listOfTransactionIndexInputs = R.flatten(R.map(R.compose(R.map(R.compose(R.join('|'), R.props(['transaction', 'index']))), R.prop('inputs'), R.prop('data')), newBlock.transactions));
-        let doubleSpendingList = R.filter((x) => x >= 2, R.map(R.length, R.groupBy(x => x)(listOfTransactionIndexInputs)));
+        list = Object.keys(list).filter(tx => list[tx] > 1);
 
-        if (R.keys(doubleSpendingList).length) {
-            console.error(`There are unspent output transactions being used more than once: unspent output transaction: '${R.keys(doubleSpendingList).join(', ')}'`);
-            throw new BlockAssertionError(`There are unspent output transactions being used more than once: unspent output transaction: '${R.keys(doubleSpendingList).join(', ')}'`);
-        }*/
-
-        // Check if there is more than 1 fee transaction or 1 reward transaction;
-        let transFeesCount = newBlock.transactions.filter(trans => trans.type == 'fee').length;
-        if (transFeesCount > 1) {
-            error(`Invalid fee transaction count: expected '1' got '${transFeesCount}'`);
-            throw `Invalid fee transaction count: expected '1' got '${transFeesCount}'`;
+        if (list.length) {
+            warn(`There are unspent output transactions being used more than once: unspent output transaction: '${list.join(', ')}'`);
+            throw `There are unspent output transactions being used more than once: unspent output transaction: '${list.join(', ')}'`;
         }
 
         let transRewardsCount = newBlock.transactions.filter(trans => trans.type == 'reward').length;
         if (transRewardsCount > 1) {
-            error(`Invalid reward transaction count: expected '1' got '${transRewardsCount}'`);
+            warn(`Invalid reward transaction count: expected '1' got '${transRewardsCount}'`);
             throw `Invalid reward transaction count: expected '1' got '${transRewardsCount}'`;
         }
 
         return true;
     }
 
-    checkTransaction(transaction, referenceBlockchain = this.blocks) {
+    checkTransaction(transaction, referenceBlockchain) {
+        if (!referenceBlockchain || typeof referenceBlockchain != 'object') referenceBlockchain = this.blocks;
         transaction.check(transaction);
 
         // Verify if the transaction isn't already in the blockchain.
@@ -223,12 +223,18 @@ class Blockchain {
                         R.contains({ transaction: txInput.transaction, index: txInput.index })
                     ))
                 ), referenceBlockchain);
-        }, transaction.data.inputs)));
+        }, transaction.data.inputs)));*/
+
+        let isInputTransactionsUnspent = transaction.data.inputs.flatMap(txInput => referenceBlockchain
+            .map(block => !!block.transactions.find(tx => tx.data.inputs.find(input =>
+                input.transaction == txInput.transaction && input.index == txInput.index))));
+        
+        console.log(isInputTransactionsUnspent)
 
         if (!isInputTransactionsUnspent) {
             console.error(`Not all inputs are unspent for transaction '${transaction.id}'`);
             throw new TransactionAssertionError(`Not all inputs are unspent for transaction '${transaction.id}'`, transaction.data.inputs);
-        }*/
+        }
 
         return true;
     }
@@ -266,7 +272,7 @@ class Blockchain {
         let txOutputs = [];
         let txInputs = [];
         this.blocks.forEach(block => block.transactions.forEach(selectTxs));
-        this.transactions.forEach(selectTxs);
+        //this.transactions.forEach(selectTxs); // need to be saved to the blocks
 
         // Cross both lists and find transactions outputs without a corresponding transaction input
         let unspentTransactionOutput = [];

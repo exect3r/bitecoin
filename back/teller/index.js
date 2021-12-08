@@ -3,6 +3,7 @@ const Transaction = require('../blockchain/transaction');
 const Database = require('../utils/database');
 const Config = require('../config');
 const { log, warn, error } = require('../utils/logs');
+const { to } = require('cli-color/move');
 
 class Teller {
     constructor(node) {
@@ -50,6 +51,36 @@ class Teller {
             .reduce((a1, a2) => a1 + a2, 0);
     }
 
+    getWalletTransactions(wallet) {
+        const transactions = this.blockchain.getTransactionsFromBlocks();
+        const addrs = wallet.getAddresses();
+
+        return transactions.flatMap(tx => {
+            let t, res = [];
+            if (t = tx.data.inputs.find(txIn => addrs.includes(txIn.address))) {
+                const to = tx.data.outputs.filter(txOut => txOut.address != t.address)[0];
+                res.push({
+                    type: tx.type,
+                    direction: 'in',
+                    from: t.address,
+                    to: to.address,
+                    amount: to.amount
+                });
+            }
+            if (t = tx.data.outputs.find(txOut => txOut.address != (t || { address: '-' }).address && addrs.includes(txOut.address))) {
+                res.push({
+                    type: tx.type,
+                    direction: 'out',
+                    from: (tx.data.inputs[0] || { address: undefined }).address,
+                    to: t.address,
+                    amount: t.amount
+                });
+            }
+            
+            return res;
+        }).filter(tx => tx);
+    }
+
     generateAddressForWallet(wallet) {
         let address = wallet.generateAddress();
         this.db.write(this.wallets);
@@ -70,10 +101,10 @@ class Teller {
         if (unspent == null || unspent.length == 0)
             return 0;
 
-        return unspent.reduce((a1, a2) => a1.amount + a2.amount);
+        return unspent.map(a => a.amount).reduce((a1, a2) => a1 + a2);
     }
 
-    createTransaction(walletId, fromAddressId, toAddressId, amount, changeAddressId) {
+    createTransaction(walletId, fromAddressId, toAddressId, amount, fee) {
         let utxo = this.blockchain.getUnspentTransactionsForAddress(fromAddressId);
         let wallet = this.getWalletById(walletId);
 
@@ -92,8 +123,8 @@ class Teller {
         let tx = Transaction.create();
         tx.from(utxo);
         tx.to(toAddressId, amount);
-        tx.change(changeAddressId || fromAddressId);
-        tx.fee(Config.FEE_PER_TRANSACTION);
+        tx.change(fromAddressId);
+        tx.fee(fee || Config.FEE_PER_TRANSACTION);
         tx.sign(secretKey);
 
         return tx.build();

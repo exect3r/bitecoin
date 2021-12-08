@@ -4,101 +4,95 @@
       <div class="card-header">
         <div class="card-title wallet-info">
           <div>Wallet - {{ email }}</div>
-          <div>{{ balance }}</div>
+          <div>{{ balance }} BeTC</div>
         </div>
       </div>
       <div class="card-body">
         <h5>Addresses:</h5>
         <div class="address-book">
-          <template v-if="addresses.length > 0">
+          <div v-if="addresses.length > 0" class="mb-1">
           <div class="address" v-for="(addr, i) in addresses" :key="i">
-            <div>{{ shortAddr(addr) }}</div>
-            <div>{{ addrBalance(addr) }}</div>
+            <div @click="copyAddr(addr)">{{ shortAddr(addr) }}</div>
+            <div>{{ balances[addr] }} BeTC</div>
           </div>
-          </template>
-          <div v-else>none</div>
-          <div class="btn btn-outline add-btn" @click="addAddress">Add</div>
+          </div>
+          <div v-else class="mb-1">none</div>
+          <div class="btn btn-outline text-center" @click="addAddress">Create Address</div>
         </div>
       </div>
     </div>
-    <div class="card wallet">
-      <div class="card-header">
-        <div class="card-title">
-          <div>Latest Transactions</div>
-        </div>
-      </div>
-      <div class="card-body">hi</div>
-    </div>
-    <div class="card mining">
-      <div class="card-header">
-        <div class="card-title">
-          <div>Mining</div>
-        </div>
-      </div>
-      <div class="card-body">hi</div>
-    </div>
+    <TransactionsPanel class="trans-history"/>
+    <SendingPanel class="trans-panel" />
+    <MiningPanel class="mining-panel" />
   </div>
 </template>
 
 <script>
-function getBalance () {
-  this.$axios.get('/api/teller/wallet/balance', { progress: false }).then((res) => {
-    this.balance = res.data.balance
-  }).catch((err) => {
-    console.log(err.response.data.error)
-  })
-}
-
 export default {
   middleware: 'auth',
   data () {
     return {
-      email: this.$auth.user.email,
-      balance: 0,
-      addresses: []
+      email: this.$auth.user.email
     }
+  },
+  mounted () {
+    this.$store.commit('activateBundle', 'wallet')
+  },
+  beforeDestroy () {
+    this.$store.commit('disactivateBundle', 'wallet')
   },
   methods: {
     addAddress () {
       this.$axios.$post('/api/teller/wallet/addresses', { progress: false }).then(
         (res) => { this.addresses.push(res.address) }
       ).catch((err) => {
-        console.log(err.response.body.error)
+        console.log(err.response.data.error)
       })
     },
-    addrBalance (addr) {
-      return 0
-    },
     shortAddr (addr) {
-      return addr.slice(0, 4) + '...' + addr.slice(-4)
+      return addr.slice(0, 4) + '—' + addr.slice(-4)
+    },
+    copyAddr (addr) {
+      console.log('copied', addr)
+      navigator.clipboard.writeText(addr)
     }
   },
-  mounted () {
-    getBalance.bind(this)()
-    this._interval = setInterval(getBalance.bind(this), 5000)
-    this.$axios.$get('/api/teller/wallet/addresses', { progress: false }).then(
-      (res) => { this.addresses = res.addresses }
-    ).catch((err) => {
-      console.log(err.response.body.error)
-    })
-  },
-  beforeDestroy () {
-    clearInterval(this._interval)
+  computed: {
+    balance () {
+      return this.$store.state.balance || 0
+    },
+    balances () {
+      return this.$store.state.addresses
+    },
+    addresses () {
+      return Object.keys(this.$store.state.addresses)
+    }
   }
 }
 </script>
 
 <style scoped>
+.text-center {
+  text-align: center;
+}
 .grid {
   display: grid;
-  grid-template-columns: 1fr 1.3fr;
+  grid-template-columns: 1fr .15fr .15fr 1fr;
   grid-template-rows: 1fr;
   grid-column-gap: 1em;
   grid-row-gap: 1em;
 }
 
-.mining {
+.trans-history {
+  grid-area: 1 / 2 / 2 / 5;
+}
+
+.trans-panel {
   grid-area: 2 / 1 / 3 / 3;
+}
+
+.mining-panel {
+  grid-area: 2 / 3 / 3 / 5;
 }
 
 .address-book {
@@ -110,10 +104,6 @@ export default {
   flex-direction: row;
   justify-content: space-between;
   margin-left: .8em;
-}
-
-.add-btn {
-  margin-top: 1em;
 }
 
 .card {
@@ -129,10 +119,18 @@ export default {
 @media (max-width: 800px) {
   .grid {
     grid-template-columns: 1fr;
-    grid-template-rows: repeat(3, 1fr);
+    grid-template-rows: repeat(4, auto);
   }
 
-  .mining {
+  .trans-history {
+    grid-area: auto;
+  }
+
+  .trans-panel {
+    grid-area: auto;
+  }
+
+  .mining-panel {
     grid-area: auto;
   }
 }

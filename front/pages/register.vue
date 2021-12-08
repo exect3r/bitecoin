@@ -21,7 +21,7 @@
             @focusout="checkEmail"
           >
         </div>
-        <div class="sep">
+        <div class="mb-1">
           <div class="label">
             <div> Password </div>
             <div v-if="pwdError" class="error"> {{ pwdError }} </div>
@@ -35,7 +35,7 @@
             @focusout="checkPassword"
           >
         </div>
-        <div class="sep">
+        <div class="mb-1">
           <div class="label">
             <div> Confirm Password </div>
             <div v-if="pwdConfirmError" class="error"> {{ pwdConfirmError }} </div>
@@ -49,7 +49,7 @@
             @focusout="checkConfirmedPassword"
           >
         </div>
-        <div class="sep">
+        <div class="mb-1">
           <div v-if="registerError" class="error"> {{ registerError }} </div>
           <input class="btn btn-outline" type="button" value="Register" @click="submit">
         </div>
@@ -151,10 +151,6 @@ export default {
 
 .input-error {
   border-color: red !important;
-}
-
-.sep {
-  margin-top: 2em;
 }
 
 .input {

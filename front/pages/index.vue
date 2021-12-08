@@ -1,7 +1,6 @@
 <template>
   <div>
     <WelcomeSection />
-    <StatsSection />
   </div>
 </template>
 

@@ -7,7 +7,7 @@
     </div>
     <div class="card-body">
       <form class="login-form">
-        <div>
+        <div class="mb-1">
           <div class="label">
             <div> E-mail </div>
             <div v-if="emailError" class="error"> {{ emailError }} </div>
@@ -21,7 +21,7 @@
             @focusout="checkEmail"
           >
         </div>
-        <div class="sep">
+        <div class="mb-1">
           <div class="label">
             <div> Password </div>
             <div v-if="pwdError" class="error"> {{ pwdError }} </div>
@@ -35,7 +35,7 @@
             @focusout="checkPassword"
           >
         </div>
-        <div class="sep">
+        <div>
           <div v-if="loginError" class="error"> {{ loginError }} </div>
           <input class="btn btn-outline" type="button" value="Login" @click="submit">
         </div>
@@ -55,6 +55,9 @@ export default {
       pwdError: undefined,
       loginError: undefined
     }
+  },
+  beforeDestroy () {
+    this.$store.dispatch('resetUserData')
   },
   methods: {
     submit () {
@@ -111,19 +114,6 @@ export default {
 
 .input-error {
   border-color: red !important;
-}
-
-.sep {
-  margin-top: 2em;
-}
-
-.input {
-  transition: border-color var(--clr-trans-spd) var(--clr-trans-tf);
-  border: 1px var(--clr-bg-dec) solid;
-  border-radius: 7px;
-  padding: .9em .7em;
-  margin-top: .3em;
-  width: 100%;
 }
 
 .btn {

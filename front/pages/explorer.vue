@@ -9,25 +9,12 @@
 </template>
 
 <script>
-async function updateData () {
-  const info = await this.$axios.$get('/api/blockchain/info', { progress: false })
-  this.$store.commit('setBlockCount', info.blockCount)
-  this.$store.commit('setTransactionCount', info.transactionCount)
-
-  const blocks = await this.$axios.$get('/api/blockchain/blocks/0-10', { progress: false })
-  this.$store.commit('setLatestBlocks', blocks)
-  const transactions = await this.$axios.$get('/api/blockchain/transactions/0-10', { progress: false })
-  this.$store.commit('setLatestTransactions', transactions)
-}
-
 export default {
   mounted () {
-    updateData.bind(this)()
-    this._interval = setInterval(updateData.bind(this), 1000)
+    this.$store.commit('activateBundle', 'explorer')
   },
-
-  destroyed () {
-    clearInterval(this._interval)
+  beforeDestroy () {
+    this.$store.commit('disactivateBundle', 'explorer')
   }
 }
 </script>

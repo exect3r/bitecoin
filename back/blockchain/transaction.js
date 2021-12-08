@@ -1,6 +1,6 @@
 const Crypto = require('../utils/crypto');
 const Config = require('../config');
-const { error } = require('../utils/logs')
+const { warn, error } = require('../utils/logs')
 
 class Transaction {
     constructor() {
@@ -46,7 +46,7 @@ class Transaction {
             let sumOfInputsAmount = 0;
             this.data.inputs.forEach((txInput) => sumOfInputsAmount += txInput.amount);
             let sumOfOutputsAmount = 0;
-            this.data.inputs.forEach((txOutput) => sumOfOutputsAmount += txOutput.amount);
+            this.data.outputs.forEach((txOutput) => sumOfOutputsAmount += txOutput.amount);
 
             let negativeOutputsFound = 0;
             let i = 0;
@@ -58,6 +58,11 @@ class Transaction {
                 }
             }
 
+            if (negativeOutputsFound > 0) {
+                error(`Transaction is either empty or negative, output(s) caught: '${negativeOutputsFound}'`);
+                throw `Transaction is either empty or negative, output(s) caught: '${negativeOutputsFound}'`;
+            }
+
             if (sumOfInputsAmount < sumOfOutputsAmount) {
                 error(`Invalid transaction balance: inputs sum '${sumOfInputsAmount}', outputs sum '${sumOfOutputsAmount}'`);
                 throw `Invalid transaction balance: inputs sum '${sumOfInputsAmount}', outputs sum '${sumOfOutputsAmount}'`;
@@ -66,11 +71,6 @@ class Transaction {
             if (sumOfInputsAmount - sumOfOutputsAmount < Config.FEE_PER_TRANSACTION) {
                 error(`Not enough fee: expected '${Config.FEE_PER_TRANSACTION}' got '${(sumOfInputsAmount - sumOfOutputsAmount)}'`);
                 throw `Not enough fee: expected '${Config.FEE_PER_TRANSACTION}' got '${(sumOfInputsAmount - sumOfOutputsAmount)}'`;
-            }
-
-            if (negativeOutputsFound > 0) {
-                error(`Transaction is either empty or negative, output(s) caught: '${negativeOutputsFound}'`);
-                throw `Transaction is either empty or negative, output(s) caught: '${negativeOutputsFound}'`;
             }
         }
 
@@ -128,7 +128,7 @@ class Transaction {
                 return this;
             },
         
-            type(type) {
+            txType(type) {
                 this.type = type;
             },
         
@@ -137,6 +137,10 @@ class Transaction {
                 if (!this.listOfUTXO) {
                     warn('List of unspent output transactions not provided.');
                     throw 'List of unspent output transactions not provided.';
+                }
+                if (this.listOfUTXO.length == 0) {
+                    warn('List of unspent output transactions is empty.');
+                    throw 'List of unspent output transactions is empty.';
                 }
                 if (!this.outputAddress) {
                     warn('Destination address not provided.');
@@ -148,7 +152,7 @@ class Transaction {
                 }
         
                 // Calculates the change amount
-                let totalAmountOfUTXO = this.listOfUTXO.reduce((t1, t2) => t1.amount + t2.amount);
+                let totalAmountOfUTXO = this.listOfUTXO.map(t => t.amount).reduce((t1, t2) => t1 + t2);
                 let changeAmount = totalAmountOfUTXO - this.totalAmount - this.feeAmount;
         
                 // For each transaction input, calculates the hash of the input and sign the data.

@@ -11,6 +11,15 @@
 
 <script>
 export default {
+  beforeCreate () {
+    this.$store.dispatch('init')
+  },
+  beforeDestroy () {
+    this.$store.commit('disactivateBundle', 'general')
+  },
+  mounted () {
+    this.$store.commit('activateBundle', 'general')
+  },
   computed: {
     darkMode () {
       return this.$store.state.darkMode

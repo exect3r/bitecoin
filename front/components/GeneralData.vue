@@ -14,7 +14,7 @@ export default {
         {
           title: 'Price',
           img: 'bitecoin.png',
-          data: `$${this.$store.state.coinPrice}`
+          data: 'priceless'
         },
         {
           title: 'Transactions',
@@ -29,7 +29,7 @@ export default {
         {
           title: 'Difficulty',
           img: 'bitecoin.png',
-          data: `${this.$store.state.hashDifficulty}H` // add kH, mH, gH and tH auto-conversion
+          data: `${this.$store.state.hashDifficulty}`
         }
       ]
     }

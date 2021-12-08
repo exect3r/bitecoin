@@ -52,6 +52,15 @@ button {
   cursor: pointer;
 }
 
+.input {
+  transition: border-color var(--clr-trans-spd) var(--clr-trans-tf);
+  border: 1px var(--clr-bg-dec) solid;
+  border-radius: 7px;
+  padding: .9em .7em;
+  margin-top: .3em;
+  width: 100%;
+}
+
 @media (max-width: 900px) {
   h1 {
     font-size: 2.6rem;
@@ -79,6 +88,7 @@ html::-webkit-scrollbar {
   --clr-bg-dec: #eee;
   --clr-fg: #555;
   --clr-fg-alt: #444;
+  --clr-fg-dec: #ccc;
   --clr-primary: #2978b5;
   --shadow: rgba(100, 100, 111, 0.2) 0px 7px 29px 0px;
 }
@@ -89,6 +99,7 @@ html::-webkit-scrollbar {
   --clr-bg-dec: #1b2033;
   --clr-fg: #bdbddd;
   --clr-fg-alt: #cdcdff;
+  --clr-fg-dec: #384268;
   --clr-primary: #90a0d9;
   --shadow: rgba(0, 0, 0, 0.16) 0px 10px 36px 0px, rgba(0, 0, 0, 0.06) 0px 0px 0px 1px;
 }
@@ -111,6 +122,14 @@ html::-webkit-scrollbar {
 .v-center {
   display: flex;
   justify-content: center;
+}
+
+.w-100 {
+  width: 100%;
+}
+
+.mb-1 {
+  margin-bottom: 1em;
 }
 
 .card {
@@ -192,6 +211,7 @@ html::-webkit-scrollbar {
 }
 
 .btn-outline {
+  height: 3em;
   color: var(--clr-primary);
   border: 1px solid var(--clr-primary);
   border-radius: 7px;

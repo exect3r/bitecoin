@@ -50,7 +50,7 @@ class Blockchain {
     }
 
     getDifficulty(index) {
-        return Config.pow.getDifficulty(this.blocks, index);
+        return Config.DIFFICULTY(this.blocks, index);
     }
 
     getAllTransactions() {

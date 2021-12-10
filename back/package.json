@@ -2,7 +2,11 @@
   "name": "bitecoin-back",
   "version": "1.0.0",
   "scripts": {
-    "start": "node index.js"
+    "node1": "node index.js --name node1 --port 3001",
+    "node2": "node index.js --name node2 --port 3002",
+    "node3": "node index.js --name node3 --port 3003",
+    "node4": "node index.js --name node4 --port 3004",
+    "node5": "node index.js --name node5 --port 3005"
   },
   "dependencies": {
     "babel": "^6.23.0",

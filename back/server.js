@@ -34,7 +34,7 @@ class BiteCoinServer {
                 blockCount: blockchain.getAllBlocks().length,
                 transactionCount: blockchain.getTransactionsFromBlocks().length,
                 coinPrice: 0, // calculate coin price in dollars
-                hashPower: Config.pow.getDifficulty(blockchain.getAllBlocks()), // calculate hash power
+                hashPower: Config.DIFFICULTY(blockchain.getAllBlocks()), // calculate hash power
             });
         });
 
@@ -265,7 +265,7 @@ class BiteCoinServer {
                 timestamp: Date.now(),
                 transactions: cleanTransactions,
                 previousHash: previousBlock.hash,
-                difficulty: Config.pow.getDifficulty(blockchain.getAllBlocks(), newIndex)
+                difficulty: Config.DIFFICULTY(blockchain.getAllBlocks(), newIndex)
             }));
         });
 

@@ -213,18 +213,6 @@ class Blockchain {
             throw `Transaction '${transaction.id}' is already in the blockchain`;
         }
 
-        // Verify if all input transactions are unspent in the blockchain
-        /*let isInputTransactionsUnspent = R.all(R.equals(false), R.flatten(R.map((txInput) => {
-            return R.map(
-                R.pipe(
-                    R.prop('transactions'),
-                    R.map(R.pipe(
-                        R.path(['data', 'inputs']),
-                        R.contains({ transaction: txInput.transaction, index: txInput.index })
-                    ))
-                ), referenceBlockchain);
-        }, transaction.data.inputs)));*/
-
         let isInputTransactionsUnspent = transaction.data.inputs.flatMap(txInput => referenceBlockchain
             .map(block => !!block.transactions.find(tx => tx.data.inputs.find(input =>
                 input.transaction == txInput.transaction && input.index == txInput.index))));
@@ -272,7 +260,6 @@ class Blockchain {
         let txOutputs = [];
         let txInputs = [];
         this.blocks.forEach(block => block.transactions.forEach(selectTxs));
-        //this.transactions.forEach(selectTxs); // need to be saved to the blocks
 
         // Cross both lists and find transactions outputs without a corresponding transaction input
         let unspentTransactionOutput = [];

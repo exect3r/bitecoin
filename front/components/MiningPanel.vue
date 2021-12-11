@@ -17,7 +17,7 @@
           </option>
         </select>
       </div>
-      <div v-if="currentBlock" class="mb-1 block-data">
+      <div class="mb-1 block-data">
         <div class="entry">
           <div class="data">
             <div>Block index:</div>
@@ -27,7 +27,7 @@
         <div class="entry">
           <div class="data">
             <div>Block transaction count:</div>
-            <div>{{currentBlock ? currentBlock.transactions.length : 0}}</div>
+            <div>{{currentBlock ? currentBlock.transactions.length : 'none'}}</div>
           </div>
         </div>
         <div class="entry">
@@ -43,7 +43,10 @@
           </div>
         </div>
       </div>
-      <button class="btn btn-outline w-100" :class="{disabled: !canMine}" @click="startMining">Start</button>
+      <div class="mt-auto">
+        <div v-if="mineErr" class="error">{{ mineErr }}</div>
+        <button class="btn btn-outline w-100" :class="{disabled: !canMine}" @click="startMining">Start</button>
+      </div>
     </div>
   </div>
 </template>
@@ -55,7 +58,8 @@ export default {
       selectedAddr: undefined,
       adrError: undefined,
       currentBlock: undefined,
-      hashPower: 0
+      hashPower: 0,
+      mineErr: undefined
     }
   },
   computed: {
@@ -79,12 +83,16 @@ export default {
       return hashHex
     },
     startMining () {
+      if (!this.canMine) {
+        return
+      }
+
       this.$axios.$get('/api/blockchain/mine/' + this.selectedAddr, { progress: false }).then(
         async (res) => {
           this.currentBlock = res
           let hashes = 0
           const start = Date.now()
-          let interv = start
+          let interv = start + 500
 
           const block = this.currentBlock
           let curDifficulty = 0
@@ -102,19 +110,24 @@ export default {
           } while (curDifficulty >= block.difficulty)
 
           delete block.difficulty
+
+          this.mineErr = undefined
           this.$axios.$post('/api/blockchain/blocks/', { block }).then(
             (res) => {
               console.log(res)
               this.$axios.$get('/api/teller/wallet/transactions/-10', { progress: false }).then((res) => {
                 this.$store.commit('setLatestUserTransactions', res.transactions)
               }).catch((err) => {
-                console.log(err.response || err)
+                console.error((err.response && err.response.data.error) || err)
               })
             }
-          ).catch((err) => { console.log(err.response || err) })
+          ).catch((err) => {
+            this.mineErr = 'Error occured, check console.'
+            console.error((err.response && err.response.data.error) || err)
+          })
         }
       ).catch((err) => {
-        console.log(err.response || err)
+        console.error((err.response && err.response.data.error) || err)
       })
     }
   }
@@ -151,15 +164,8 @@ export default {
   margin-top: auto;
 }
 
-.disabled {
-  border-color: gray;
-  color: gray;
-  background-color: rgb(206, 206, 206);
-  cursor: not-allowed;
-}
-
 .input-error {
-  border-color: red !important;
+  border-color: var(--clr-red) !important;
 }
 
 .label {
@@ -169,6 +175,6 @@ export default {
 }
 
 .error {
-  color: rgba(219, 27, 27);
+  color: var(--clr-red);
 }
 </style>

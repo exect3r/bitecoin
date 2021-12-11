@@ -8,7 +8,7 @@
         <div v-for="(trans, i) of latestTransactions" :key="i" class="entry">
           <div class="data">
             <div class="entry-hash">
-              <NuxtLink :to="{ path: '/transaction', query: {hash: trans.hash} }">
+              <NuxtLink class="n-link" :to="{ path: '/transaction', query: {hash: trans.hash} }">
                 {{ shortHash(trans.id) }}
               </NuxtLink>
             </div>

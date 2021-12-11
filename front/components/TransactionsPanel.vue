@@ -83,14 +83,14 @@ export default {
   height: 1.4em;
   mask: url('/right-arrow.svg');
   mask-repeat: no-repeat;
-  background-color: red;
+  background-color: var(--clr-red);
   margin-left: 1em;
   margin-right: 1em;
 }
 
 .reversed {
   transform: rotate(180deg);
-  background-color: green;
+  background-color: var(--clr-green);
 }
 
 .mining-reward {
@@ -99,7 +99,7 @@ export default {
   mask: url('/mining-icon.svg');
   mask-repeat: no-repeat;
   mask-size: contain;
-  background-color: green;
+  background-color: var(--clr-green);
   margin-right: .6em;
 }
 

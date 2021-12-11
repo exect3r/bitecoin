@@ -90,6 +90,10 @@ html::-webkit-scrollbar {
   --clr-fg-alt: #444;
   --clr-fg-dec: #ccc;
   --clr-primary: #2978b5;
+  --clr-disabled: #f3f3f3;
+  --clr-disabled-alt: #a9a9a9;
+  --clr-green: #12a712;
+  --clr-red: #f33a3a;
   --shadow: rgba(100, 100, 111, 0.2) 0px 7px 29px 0px;
 }
 
@@ -101,6 +105,10 @@ html::-webkit-scrollbar {
   --clr-fg-alt: #cdcdff;
   --clr-fg-dec: #384268;
   --clr-primary: #90a0d9;
+  --clr-disabled: #1b1f30;
+  --clr-disabled-alt: #424e81;
+  --clr-green: #45b745;
+  --clr-red: #dd2e2e;
   --shadow: rgba(0, 0, 0, 0.16) 0px 10px 36px 0px, rgba(0, 0, 0, 0.06) 0px 0px 0px 1px;
 }
 
@@ -122,6 +130,10 @@ html::-webkit-scrollbar {
 .v-center {
   display: flex;
   justify-content: center;
+}
+
+.mt-auto {
+  margin-top: auto;
 }
 
 .w-100 {
@@ -158,6 +170,17 @@ html::-webkit-scrollbar {
 .card-body {
   padding: 1.2em;
   background-color: transparent;
+}
+
+.disabled {
+  border-color: var(--clr-disabled-alt) !important;
+  color: var(--clr-disabled-alt) !important;
+  background-color: var(--clr-disabled) !important;
+  cursor: default !important;
+}
+
+.n-link {
+  color: var(--clr-primary);
 }
 
 .link {

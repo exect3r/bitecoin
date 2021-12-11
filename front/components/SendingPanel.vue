@@ -161,13 +161,6 @@ export default {
 </script>
 
 <style scoped>
-.disabled {
-  border-color: gray;
-  color: gray;
-  background-color: rgb(206, 206, 206);
-  cursor: not-allowed;
-}
-
 .amount {
   display: flex;
   flex-direction: row;
@@ -178,7 +171,7 @@ export default {
 }
 
 .input-error {
-  border-color: red !important;
+  border-color: var(--clr-red) !important;
 }
 
 .currency {

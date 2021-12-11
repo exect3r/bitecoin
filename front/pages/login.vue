@@ -109,11 +109,11 @@ export default {
 }
 
 .error {
-  color: rgba(219, 27, 27);
+  color: var(--clr-red);
 }
 
 .input-error {
-  border-color: red !important;
+  border-color: var(--clr-red) !important;
 }
 
 .btn {

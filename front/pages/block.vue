@@ -47,7 +47,7 @@
             Miner
           </div>
           <div class="value">
-            {{ block.hash }}
+            {{ block.miner || '???' }}
           </div>
         </div>
       </div>
@@ -82,6 +82,14 @@ export default {
 <style scoped>
 .block-data {
   overflow: hidden;
+}
+
+.entry:not(:first-child) {
+  margin-top: 1em;
+}
+
+.entry:not(:last-child) {
+  margin-bottom: 1em;
 }
 
 .block-data .entry::after {

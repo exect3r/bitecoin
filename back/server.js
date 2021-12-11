@@ -56,9 +56,7 @@ class BiteCoinServer {
                     res.status(200).send({ status: 'Block added to the blockchain successfully. ' });
                 }
             } catch (e) {
-                warn(e);
                 res.status(403).send({ error: e });
-                throw e;
             }
         });
 
@@ -78,12 +76,19 @@ class BiteCoinServer {
         this.app.put('/blockchain/blocks/latest', (req, res) => {
             logReq('PUT', req);
 
-            let requestBlock = Block.fromJson(req.body);
-            let result = node.checkReceivedBlock(requestBlock);
+            let requestBlock = Block.fromJson(req.body.block);
 
-            if (result == null) res.status(200).send('Requesting the blockchain to check.');
+            if (!requestBlock) {
+                warn('Request does not contain a valid block.');
+                return;
+            }
+
+            let result = blockchain.checkReceivedBlock(requestBlock);
+
+            if (result == 'need_full_blockchain')
+                res.status(200).send({ status: 'Requesting the full blockchain to check.' });
             else if (result) res.status(200).send(requestBlock);
-            else throw new HTTPError(409, 'Blockchain is update.');
+            else res.status(200).send({ status: 'Blockchain seems ahead.' });
         });
 
         this.app.get('/blockchain/blocks/:hash([a-zA-Z0-9]{64})', (req, res) => {
@@ -161,14 +166,11 @@ class BiteCoinServer {
         this.app.post('/blockchain/transactions', (req, res) => {
             logReq('POST', req);
 
-            let requestTransaction = Transaction.fromJson(req.body);
+            let requestTransaction = Transaction.fromJson(req.body.transaction);
             let transactionFound = blockchain.getTransactionById(requestTransaction.id);
 
-            if (transactionFound) {
-                warn(`Transaction '${requestTransaction.id.yellow}' already exists!`);
-                res.status(409).send({ error: `Transaction '${requestTransaction.id}' already exists!` });
+            if (transactionFound)
                 return;
-            }
 
             try {
                 let newTransaction = blockchain.addTransaction(requestTransaction);
@@ -193,10 +195,10 @@ class BiteCoinServer {
             let cleanTransactions = [];
             let toRemove = [];
 
-            console.log('len', blockchain.transactions.length)
+            //console.log('len', blockchain.transactions.length)
 
             blockchain.transactions.forEach((trans, i) => {
-                console.log('treating ', i)
+                //console.log('treating ', i)
                 if (cleanTransactions.length == Config.TRANSACTIONS_PER_BLOCK) return;
 
                 if (trans.type == 'regular' && trans.data.outputs.find(out => out.amount < 0)) {
@@ -241,8 +243,6 @@ class BiteCoinServer {
             });
 
             toRemove.forEach(i => blockchain.transactions.splice(i, 1));
-            console.log('removed', toRemove);
-            console.log(blockchain.transactions)
             cleanTransactions = cleanTransactions.slice(0, Config.TRANSACTIONS_PER_BLOCK);
 
             if (req.params.addressId) {
@@ -265,7 +265,8 @@ class BiteCoinServer {
                 timestamp: Date.now(),
                 transactions: cleanTransactions,
                 previousHash: previousBlock.hash,
-                difficulty: Config.DIFFICULTY(blockchain.getAllBlocks(), newIndex)
+                difficulty: Config.DIFFICULTY(blockchain.getAllBlocks(), newIndex),
+                miner: req.params.addressId
             }));
         });
 
@@ -424,6 +425,22 @@ class BiteCoinServer {
             res.status(200).send({ balance: balance });
         });
 
+        this.app.get('/peers', (req, res) => {
+            logReq('GET', req);
+
+            res.status(200).send({ status: 'online' });
+        });
+
+        this.app.post('/peers', (req, res) => {
+            logReq('POST', req);
+
+            if (req.body.peer) {
+                blockchain.connectToPeers([req.body.peer]);
+                res.status(200).send({ status: 'peer received' });
+            }
+            else res.status(400).send({ error: '\'peer\' not specified in request body.' });
+        });
+
         this.app.get('/blockchain/utxos', (req, res) => {
             logReq('GET', req);
 
@@ -454,3 +471,5 @@ class BiteCoinServer {
 }
 
 module.exports = BiteCoinServer;
+
+// Add transactions cleaning from double-spending errors.

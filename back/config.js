@@ -2,6 +2,7 @@ module.exports = {
     BLOCKCHAIN_FILE: 'blockchain',
     TRANSACTIONS_FILE: 'transactions',
     TELLER_FILE: 'wallets',
+    PEERS_FILE: 'peers',
     
     SALT: '0ffaa74d206930aaece253f090c88dbe6685b9e66ec49ad988d84fd7dff230d1',
     SECRET: '7pec3ac02f82245pen9df13ddf7c3c0f19bab4acd4dc928c62fcd78d5ebc4fgh',

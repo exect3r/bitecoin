@@ -10,7 +10,7 @@ class BiteCoin {
         this.port = process.env.PORT || argv.port || 3001;
         this.name = process.env.NAME || argv.name || 'unnamed';
 
-        this.blockchain = new Blockchain(this.name);
+        this.blockchain = new Blockchain(this.name, this.host, this.port);
         this.blockchain.init();
 
         this.teller = new Teller(this);

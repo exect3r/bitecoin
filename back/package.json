@@ -9,6 +9,7 @@
     "node5": "node index.js --name node5 --port 3005"
   },
   "dependencies": {
+    "axios": "^0.24.0",
     "babel": "^6.23.0",
     "body-parser": "^1.17.1",
     "cli-color": "^1.2.0",

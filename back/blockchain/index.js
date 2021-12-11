@@ -1,20 +1,24 @@
 const Database = require('../utils/database');
 const Block = require('./block');
 const Transaction = require('./transaction');
+const Peer = require('./peer');
 const Config = require('../config');
+const axios = require('axios').default;
 const { log, error, warn } = require('../utils/logs');
-const EventEmitter = require('events');
 
 class Blockchain {
-    constructor(name) {
+    constructor(name, host, port) {
         this.name = name;
+        this.host = host;
+        this.port = port;
+        this.peers = [];
 
         this.blocksDb = new Database(`data/${name}/${Config.BLOCKCHAIN_FILE}`, new Block.Array());
         this.transDb = new Database(`data/${name}/${Config.TRANSACTIONS_FILE}`, new Transaction.Array());
+        this.peerDb = new Database(`data/${Config.PEERS_FILE}`, new Peer.Array())
 
         this.blocks = this.blocksDb.read(Block.Array);
         this.transactions = this.transDb.read(Transaction.Array);
-        this.events = new EventEmitter();
     }
 
     init() {
@@ -27,7 +31,15 @@ class Blockchain {
 
         log('Culling already processed transactions.');
         this.blocks.forEach(this.cullTransactions.bind(this), this.blocks);
+
+        const peerList = this.peerDb.read(Peer.Array);
+        if (peerList.length > 0) {
+            log('Attempting to connect to peers.');
+            this.connectToPeers(peerList, false);
+        }
     }
+
+    // Blockchain
 
     getAllBlocks() {
         return this.blocks;
@@ -74,20 +86,21 @@ class Blockchain {
         return this.blocks.flatMap(block => block.transactions);
     }
 
-    replaceChain(blockchain) {
+    replaceChain(blockchain, broadcast = true) {
         if (blockchain.length <= this.blocks.length) {
             error('Blockchain is shorter than the current blockchain');
             throw 'Blockchain is shorter than the current blockchain';
         }
 
         this.checkChain(blockchain);
-        log('Received blockchain is valid. Replacing current blockchain with received blockchain');
+        log('Received blockchain is valid. Replacing current blockchain with received blockchain.');
 
         // Adding the extra blocks from the received blockchain.
-        let blocks = blockchain.slice(blockchain.length - this.blocks.length);
+        let blocks = blockchain.slice(this.blocks.length - blockchain.length);
         blocks.forEach((block) => this.addBlock(block, false));
         
-        this.events.emit('blocksAdded', blocks);
+        if (broadcast)
+            this.broadcast(this.sendLatestBlockToPeer, blocks[blocks.length - 1]);
     }
 
     checkChain(blockchain) {
@@ -108,26 +121,29 @@ class Blockchain {
         return true;
     }
 
-    addBlock(block, event = true) {
+    addBlock(block, broadcast = true) {
         if (this.checkBlock(block, this.getLastBlock())) {
             this.blocks.push(block);
             this.blocksDb.write(this.blocks);
 
-            // After adding the block it removes the transactions of this block from the list of pending transactions
             this.cullTransactions(block);
 
-            if (event) this.events.emit('blockAdded', block);
+            if (broadcast)
+                this.broadcast(this.sendLatestBlockToPeer, block);
+            
             log(`Block added: ${block.hash.yellow}`);
             return block;
         }
     }
 
-    addTransaction(trans, event = true) {
+    addTransaction(trans, broadcast = true) {
         if (this.checkTransaction(trans, this.blocks)) {
             this.transactions.push(trans);
             this.transDb.write(this.transactions);
 
-            if (event) this.events.emit('transactionsAdded', trans);
+            if (broadcast)
+                this.broadcast(this.sendTransactionToPeer, trans);
+            
             log(`Transaction added: ${trans.id.yellow}`);
             return trans;
         }
@@ -179,7 +195,7 @@ class Blockchain {
                 .forEach(tx => { list[tx] ? list[tx]++ : list[tx] = 1; });
         }
 
-        log(`sums ${sumOfInputsAmount} ${sumOfOutputsAmount}`);
+        //log(`sums ${sumOfInputsAmount} ${sumOfOutputsAmount}`);
 
         if (sumOfInputsAmount < sumOfOutputsAmount) {
             error(`Invalid block balance: inputs sum '${sumOfInputsAmount}', outputs sum '${sumOfOutputsAmount}'`);
@@ -216,8 +232,6 @@ class Blockchain {
         let isInputTransactionsUnspent = transaction.data.inputs.flatMap(txInput => referenceBlockchain
             .map(block => !!block.transactions.find(tx => tx.data.inputs.find(input =>
                 input.transaction == txInput.transaction && input.index == txInput.index))));
-        
-        console.log(isInputTransactionsUnspent)
 
         if (!isInputTransactionsUnspent) {
             console.error(`Not all inputs are unspent for transaction '${transaction.id}'`);
@@ -270,6 +284,183 @@ class Blockchain {
         });
 
         return unspentTransactionOutput;
+    }
+
+    // Peer management
+
+    broadcast(f, ...args) {
+        this.peers.map((peer) => {
+            f.apply(this, [peer, ...args]);
+        });
+    }
+
+    connectToPeer(peer) {
+        return axios.get(`${peer}/peers`).then((res) => true).catch((err) => false);
+    }
+
+    connectToPeers(peers, logExisting = true) {
+        const self = `http://${this.host}:${this.port}`;
+        peers.forEach((peer) => {
+            if (peer == self) return;
+            if (!this.peers.find(p => p == peer))
+                this.connectToPeer(peer).then((isOnline) => {
+                    if (isOnline) {
+                        this.sendPeer(peer, self);
+                        this.peers.push(peer);
+
+                        log(`Added peer ${peer.yellow}.`);
+
+                        this.getLatestBlockFromPeer(peer);
+                        this.getTransactionsFromPeer(peer);
+
+                        this.broadcast(this.sendPeer, peer);
+                    }
+                    else log(`Peer ${peer.yellow} is ${'offline'.red}.`);
+                });
+            else if (logExisting) log(`Peer ${peer.yellow} already added.`);
+        });
+    }
+
+    sendPeer(peer, destPeer) {
+        if (peer == destPeer) return;
+
+        const URL = `${peer}/peers`;
+        log(`Sending ${destPeer.yellow} to peer ${URL.cyan}.`);
+        return axios
+            .post(URL, { peer: destPeer })
+            .catch((err) => {
+                console.warn(`Unable to ${destPeer.yellow} me to peer ${URL.cyan}: ${err.message}`);
+            });
+    }
+
+    getLatestBlockFromPeer(peer) {
+        const URL = `${peer}/blockchain/blocks/latest`;
+        log(`Getting latest block from: ${URL.yellow}`);
+        return axios.get(URL)
+            .then((res) => {
+                if (!res.data) {
+                    warn(`${URL.yellow} did not return a valid block.`);
+                    return;
+                }
+                this.checkReceivedBlock(Block.fromJson(res.data));
+            })
+            .catch((err) => {
+                warn(`Unable to get latest block from ${URL.yellow}: ${err.message}`);
+            });
+    }
+
+    sendLatestBlockToPeer(peer, block) {
+        const URL = `${peer}/blockchain/blocks/latest`;
+        log(`Posting latest block to: ${URL.yellow}`);
+        return axios.put(URL, { block })
+            .catch((err) => {
+                warn(`Unable to post latest block to ${URL.yellow}: ${err.message}`);
+            });
+    }
+
+    getBlocksFromPeer(peer) {
+        const URL = `${peer}/blockchain/blocks`;
+        log(`Getting blocks from: ${URL.yellow}`);
+        return axios.get(URL)
+            .then((res) => {
+                if (!res.data) {
+                    warn(`${URL.yellow} did not return a valid array of blocks.`);
+                    return;
+                }
+                this.checkReceivedBlocks(Block.Array.fromJson(res.data));
+            })
+            .catch((err) => {
+                warn(`Unable to get blocks from ${URL.yellow}: ${err.message}`);
+            });
+    }
+
+    sendTransactionToPeer(peer, transaction) {
+        const URL = `${peer}/blockchain/transactions`;
+        log(`Sending transaction '${(transaction.id.slice(0, 5) + '...' + transaction.id.slice(-5)).yellow}' to: '${URL.yellow}'`);
+        return axios.post(URL, { transaction })
+            .catch((err) => {
+                warn(`Unable to post transaction to ${URL}: ${err.message}`);
+            });
+    }
+
+    getTransactionsFromPeer(peer) {
+        const URL = `${peer}/blockchain/transactions`;
+        log(`Getting transactions from: ${URL.yellow}`);
+        return axios.get(URL)
+            .then((res) => {
+                if (!res.data) {
+                    warn(`${URL.yellow} did not return a valid array of transactions.`);
+                    return;
+                }
+                this.syncTransactions(Transaction.Array.fromJson(res.data));
+            })
+            .catch((err) => {
+                warn(`Unable to get transations from ${URL.yellow}: ${err.message}`);
+            });
+    }
+
+    getConfirmation(peer, transactionId) {
+        const URL = `${peer}/blockchain/blocks/transactions/${transactionId}`;
+        log(`Getting transactions from: ${URL.yellow}`);
+        return axios.get(URL)
+            .then(() => {
+                return true;
+            })
+            .catch(() => {
+                return false;
+            });
+    }
+
+    getConfirmations(transactionId) {
+        const existsHere = this.getTransactionFromBlocks(transactionId) ? true : false;
+        return Promise.all(this.peers.map((peer) => {
+            return this.getConfirmation(peer, transactionId);
+        })).then((values) => {
+            return [existsHere, ...values].filter((conf) => conf).length;
+        });
+    }
+
+    syncTransactions(transactions) {
+        transactions.forEach((trans) => {
+            if (!this.getTransactionById(trans.id)) {
+                log(`Adding transaction '${trans.id.yellow}'`);
+                this.addTransaction(trans);
+            }
+        });
+    }
+
+    checkReceivedBlock(block) {
+        return this.checkReceivedBlocks([block]);
+    }
+
+    checkReceivedBlocks(blocks) {
+        const orderedBlocks = blocks.sort((b1, b2) => b1.index - b2.index);
+        const apexForeign = orderedBlocks[orderedBlocks.length - 1];
+        const apexHere = this.getLastBlock();
+
+        if (apexForeign.index <= apexHere.index)
+            return false;
+
+        log(`Blockchain is possibly behind. Our height: ${apexHere.index}, Peer's height: ${apexForeign.index}.`);
+
+        // We can append the received block to our chain
+        if (apexHere.hash === apexForeign.previousHash) {
+            log('Appending received block to our chain.');
+            this.addBlock(apexForeign);
+            return true;
+        }
+        // We have to query the chain from our peer
+        else if (orderedBlocks.length == 1) {
+            log('Querying the blockchain from our peers.');
+            this.broadcast(this.getBlocksFromPeer);
+            return 'need_full_blockchain';
+        }
+        // Received blockchain is longer than current blockchain
+        else {
+            log('Updating blockchain to match peer\'s blockchain.');
+            this.replaceChain(orderedBlocks);
+            return true;
+        }
     }
 }
 

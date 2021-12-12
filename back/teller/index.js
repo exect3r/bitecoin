@@ -1,6 +1,7 @@
 const Wallet = require('./wallet');
 const Transaction = require('../blockchain/transaction');
 const Database = require('../utils/database');
+const Crypto = require('../utils/crypto');
 const Config = require('../config');
 const { log, warn, error } = require('../utils/logs');
 
@@ -23,14 +24,15 @@ class Teller {
         return this.addWallet(newWallet);
     }
 
-    checkWalletPassword(walletId, passwordHash) {
+    checkWalletPassword(walletId, password) {
         let wallet = this.getWalletById(walletId);
+
         if (wallet == null) {
             error((`Wallet with id '${walletId.yellow}' does not exist!`));
             throw (`Wallet with id '${walletId}' does not exist!`);
         }
 
-        return wallet.passwordHash == passwordHash;
+        return Crypto.isPasswordCorrect(password, wallet.passwordHash);
     }
 
     getWallets() {

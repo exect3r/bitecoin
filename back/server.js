@@ -294,7 +294,6 @@ class BiteCoinServer {
 
         this.app.post('/teller/login', (req, res) => {
             logReq('POST', req);
-            const hashedPwd = Crypto.hash(req.body.password);
 
             let wallet = teller.getWalletByEmail(req.body.email);
             if (!wallet) {
@@ -303,7 +302,7 @@ class BiteCoinServer {
                 return;
             }
 
-            if (!teller.checkWalletPassword(wallet.id, hashedPwd)) {
+            if (!teller.checkWalletPassword(wallet.id, req.body.password)) {
                 warn(`Password hash does not match!`);
                 res.status(401).send({ error: `Incorrect E-mail or password.` });
                 return;
@@ -319,7 +318,7 @@ class BiteCoinServer {
         this.app.post('/teller/register', (req, res) => {
             logReq('POST', req);
 
-            const hashedPwd = Crypto.hash(req.body.password);
+            const hashedPwd = Crypto.hashPassword(req.body.password);
 
             let wallet = teller.getWalletByEmail(req.body.email);
             if (wallet) {

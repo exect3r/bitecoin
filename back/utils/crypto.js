@@ -2,12 +2,21 @@ const crypto = require('crypto');
 const elliptic = require('elliptic');
 const EdDSA = elliptic.eddsa;
 const ec = new EdDSA('ed25519');
-const Config = require('../config')
+const Config = require('../config');
+const bcrypt = require('bcrypt');
 
 class Crypto {
     static hash(data) {
         let str = typeof (data) == 'object' ? JSON.stringify(data) : data.toString();
         return crypto.createHash('sha256').update(str).digest('hex');
+    }
+
+    static hashPassword(password) {
+        return bcrypt.hashSync(password, 11);
+    }
+
+    static isPasswordCorrect(password, hashedPassword) {
+        return bcrypt.compareSync(password, hashedPassword);
     }
 
     static randomId(size = 64) {

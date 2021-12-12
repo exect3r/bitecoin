@@ -7,6 +7,7 @@ const { log, error, warn } = require('./utils/logs');
 const Crypto = require('./utils/crypto');
 const Config = require('./config');
 const jwt = require('jsonwebtoken');
+const RateLimiter = require('express-rate-limit');
 
 class BiteCoinServer {
     constructor(node) {
@@ -26,6 +27,10 @@ class BiteCoinServer {
 
         this.app = express();
         this.app.use(bodyParser.json());
+        this.app.use(RateLimiter({
+            windowMs: 1000,
+            max: 25
+        }));
 
         this.app.get('/blockchain/info', (req, res) => {
             logReq('GET', req);

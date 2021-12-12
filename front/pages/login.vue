@@ -73,6 +73,10 @@ export default {
       }
     },
     checkEmail () {
+      if (this.email.length > 30) {
+        this.emailError = 'invalid email'
+        return
+      }
       /* eslint-disable */
       if (!/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/.test(this.email)) {
       /* eslint-enable */

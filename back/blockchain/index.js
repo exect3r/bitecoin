@@ -257,7 +257,7 @@ class Blockchain {
                 index++;
             });
 
-            // Create a list of all transactions inputs found for an address (or all).            
+            // Create a list of all transactions inputs found for an address (or all).
             transaction.data.inputs.forEach((txInput) => {
                 if (address && txInput.address != address) return;
 

@@ -3,7 +3,6 @@ const Transaction = require('../blockchain/transaction');
 const Database = require('../utils/database');
 const Config = require('../config');
 const { log, warn, error } = require('../utils/logs');
-const { to } = require('cli-color/move');
 
 class Teller {
     constructor(node) {

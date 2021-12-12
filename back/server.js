@@ -472,4 +472,4 @@ class BiteCoinServer {
 
 module.exports = BiteCoinServer;
 
-// Add transactions cleaning from double-spending errors.
+// TODO: Add transactions cleaning from double-spending errors.

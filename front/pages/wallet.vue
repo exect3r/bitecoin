@@ -12,7 +12,7 @@
         <div class="address-book">
           <div v-if="addresses.length > 0" class="mb-1">
           <div class="address" v-for="(addr, i) in addresses" :key="i">
-            <div @click="copyAddr(addr)">{{ shortAddr(addr) }}</div>
+            <div @click="copyAddr(addr)" v-tooltip="addr">{{ shortAddr(addr) }}</div>
             <div>{{ balances[addr] }} BeTC</div>
           </div>
           </div>

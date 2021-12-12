@@ -1,7 +1,7 @@
 <template>
   <div class="entry">
     <div class="icon" :style="'background-image: url(' + img + ');'" />
-    <div class="data-panel">
+    <div class="data-panel" v-tooltip="tooltip">
       <span class="title">{{ title }}</span>
       <span class="data">{{ data }}</span>
     </div>
@@ -10,7 +10,7 @@
 
 <script>
 export default {
-  props: ['title', 'img', 'data']
+  props: ['title', 'img', 'data', 'tooltip']
 }
 </script>
 

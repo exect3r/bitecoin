@@ -1,7 +1,7 @@
 <template>
   <div class="card card-body grid">
     <div v-for="(data, i) of generalData" :key="i" :class="'data' + i">
-      <GeneralDataEntry :title="data.title" :img="data.img" :data="data.data"/>
+      <GeneralDataEntry :title="data.title" :img="data.img" :data="data.data" :tooltip="data.tooltip"/>
     </div>
   </div>
 </template>
@@ -14,22 +14,26 @@ export default {
         {
           title: 'Price',
           img: 'bitecoin.png',
-          data: 'priceless'
+          data: 'priceless',
+          tooltip: 'This coin is meant for educational purposes only'
         },
         {
           title: 'Transactions',
           img: 'bitecoin.png',
-          data: this.$store.state.transactionCount
+          data: this.$store.state.transactionCount,
+          tooltip: 'The number of confirmed transactions in the blockchain'
         },
         {
           title: 'Blocks',
           img: 'bitecoin.png',
-          data: this.$store.state.blockCount
+          data: this.$store.state.blockCount,
+          tooltip: 'The number of confirmed blocks in the blockchain'
         },
         {
           title: 'Difficulty',
           img: 'bitecoin.png',
-          data: `${this.$store.state.hashDifficulty}`
+          data: `${this.$store.state.hashDifficulty}`,
+          tooltip: 'Calculated hashes need to be less than this value'
         }
       ]
     }

@@ -8,7 +8,7 @@
         <div v-for="(block, i) of latestBlocks" :key="i" class="entry">
           <div class="data">
             <div class="entry-hash">
-              <NuxtLink class="n-link" :to="{ path: '/block', query: {hash: block.hash} }">
+              <NuxtLink class="n-link" :to="{ path: '/block', query: {hash: block.hash} }" v-tooltip="block.hash">
                 {{ shortHash(block.hash) }}
               </NuxtLink>
             </div>

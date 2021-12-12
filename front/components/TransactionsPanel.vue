@@ -9,21 +9,21 @@
       <div class="transaction" v-for="(trans, i) of transactions" :key="i">
         <template v-if="trans.type === 'regular'">
           <template v-if="trans.direction === 'in'">
-            <div @click="copyAddr(trans.from)" class="sender">{{ shortAddr(trans.from) }}</div>
+            <div @click="copyAddr(trans.from)" class="sender" v-tooltip="trans.from">{{ shortAddr(trans.from) }}</div>
             <div class="arrow" />
-            <div @click="copyAddr(trans.to)" class="receiver">{{ shortAddr(trans.to) }}</div>
+            <div @click="copyAddr(trans.to)" class="receiver" v-tooltip="trans.to">{{ shortAddr(trans.to) }}</div>
           </template>
           <template v-else>
-            <div @click="copyAddr(trans.to)" class="receiver">{{ shortAddr(trans.to) }}</div>
+            <div @click="copyAddr(trans.to)" class="receiver" v-tooltip="trans.to">{{ shortAddr(trans.to) }}</div>
             <div class="arrow reversed" />
-            <div @click="copyAddr(trans.from)" class="sender">{{ shortAddr(trans.from) }}</div>
+            <div @click="copyAddr(trans.from)" class="sender" v-tooltip="trans.from">{{ shortAddr(trans.from) }}</div>
           </template>
           <div class="line" />
           <div class="amount">{{ trans.amount }} BeTC</div>
         </template>
         <template v-else-if="trans.type === 'reward'">
           <div class="mining-reward" />
-          <div class="receiver">{{ shortAddr(trans.to) }}</div>
+          <div class="receiver" v-tooltip="trans.to">{{ shortAddr(trans.to) }}</div>
           <div class="line" />
           <div class="amount">{{ trans.amount }} BeTC</div>
         </template>

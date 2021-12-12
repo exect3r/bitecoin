@@ -39,7 +39,7 @@
         <div class="entry">
           <div class="data">
             <div>Current Hashrate:</div>
-            <div>{{(currentBlock ? hashPower : 0).toFixed(0)}} Hs</div>
+            <div v-tooltip="'Hashes per second'">{{(currentBlock ? hashPower : 0).toFixed(0)}} Hs</div>
           </div>
         </div>
       </div>
